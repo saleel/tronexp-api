@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "description": "TRON Blockchain Explorer",
   "scripts": {
-    "start-server":
-      "./node_modules/nodemon/bin/nodemon.js -w . -x \"./node_modules/babel-cli/bin/babel-node.js . --presets env,stage-0\"",
-    "build-server":
-      "npm install && ./node_modules/babel-cli/bin/babel.js . -d ../dist --ignore node_modules --presets env,stage-0"
+    "dev": "./node_modules/nodemon/bin/nodemon.js -w . -x \"./node_modules/babel-cli/bin/babel-node.js . --presets env,stage-0\"",
+    "build": "rm -rf ./dist && npm install && ./node_modules/babel-cli/bin/babel.js . -d ./dist --ignore node_modules --presets env,stage-0  && (cp .env ./dist)",
+    "start": "(cd dist && node .)"
   },
   "dependencies": {
     "@feathersjs/configuration": "^1.0.2",
@@ -14,10 +13,6 @@
     "@feathersjs/express": "^1.1.2",
     "@feathersjs/feathers": "^3.1.0",
     "axios": "^0.18.0",
-    "babel-cli": "^6.26.0",
-    "babel-polyfill": "^6.26.0",
-    "babel-preset-env": "^1.6.1",
-    "babel-preset-stage-0": "^6.24.1",
     "compression": "^1.7.1",
     "cors": "^2.8.4",
     "crypto-js": "^3.1.9-1",
@@ -41,6 +36,10 @@
     "eslint": "^4.16.0",
     "eslint-config-airbnb-base": "^12.1.0",
     "eslint-plugin-import": "^2.8.0",
-    "nodemon": "^1.14.12"
+    "nodemon": "^1.14.12",
+    "babel-cli": "^6.26.0",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-stage-0": "^6.24.1"
   }
 }

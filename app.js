@@ -15,7 +15,6 @@ const app = express(feathers());
 
 dotenv.config();
 app.set('PORT', process.env.PORT);
-app.set('CLIENT_DIR', process.env.CLIENT_DIR);
 app.set('MONGO_URL', process.env.MONGO_URL);
 app.set('RPC_HOST', process.env.RPC_HOST);
 app.set('RPC_PORT', process.env.RPC_PORT);
@@ -26,9 +25,6 @@ app.use(helmet());
 app.use(compress());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Host client
-app.use('/', express.static(path.join(__dirname, app.get('CLIENT_DIR'))));
 
 // Set up Plugins and providers
 app.configure(express.rest());
