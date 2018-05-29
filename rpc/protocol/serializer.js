@@ -8,8 +8,7 @@ function deserializeTransaction(tx) {
   let contractType = Transaction.Contract.ContractType;
 
   let contractList = tx.getRawData().getContractList();
-  let timestamp = parseInt(tx.getRawData().getTimestamp(), 10);
-
+  let timestamp = +`${tx.getRawData().getTimestamp()}`.slice(0, 13);
   var hash = byteArray2hexStr(SHA256(tx.serializeBinary()));
 
   let transactions = [];
