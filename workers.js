@@ -107,9 +107,9 @@ function setup(app) {
       console.warn(err);
     }
 
-    // setTimeout(() => {
-    //   runTask();
-    // }, interval);
+    setTimeout(() => {
+      runTask();
+    }, interval);
   }
 
   runTask();
