@@ -53,7 +53,7 @@ function setup(app) {
         (latestTransactionInDb && latestTransactionInDb.blockNumber) || 0;
 
       for (
-        let i = latestBlockNumber;
+        let i = latestBlockNumInDb;
         i < Math.min(latestBlockNumber, latestBlockNumInDb + 5000);
         i += 1
       ) {
