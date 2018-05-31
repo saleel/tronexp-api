@@ -1,8 +1,11 @@
 const getBase58CheckAddress = require('../utils/crypto').getBase58CheckAddress;
 const { Block, Transaction } = require('../protocol/core/Tron_pb');
-const { TransferContract } = require('../protocol/core/Contract_pb');
+const {
+  TransferContract,
+  TransferAssetContract
+} = require('../protocol/core/Contract_pb');
 import { SHA256 } from '../utils/crypto';
-import { byteArray2hexStr } from '../utils/bytes';
+import { bytesToString, byteArray2hexStr } from '../utils/bytes';
 
 function deserializeTransaction(tx) {
   let contractType = Transaction.Contract.ContractType;
@@ -12,6 +15,22 @@ function deserializeTransaction(tx) {
   var hash = byteArray2hexStr(SHA256(tx.serializeBinary()));
 
   let transactions = [];
+
+  // { ACCOUNTCREATECONTRACT: 0,
+  //   TRANSFERCONTRACT: 1,
+  //   TRANSFERASSETCONTRACT: 2,
+  //   VOTEASSETCONTRACT: 3,
+  //   VOTEWITNESSCONTRACT: 4,
+  //   WITNESSCREATECONTRACT: 5,
+  //   ASSETISSUECONTRACT: 6,
+  //   DEPLOYCONTRACT: 7,
+  //   WITNESSUPDATECONTRACT: 8,
+  //   PARTICIPATEASSETISSUECONTRACT: 9,
+  //   ACCOUNTUPDATECONTRACT: 10,
+  //   FREEZEBALANCECONTRACT: 11,
+  //   UNFREEZEBALANCECONTRACT: 12,
+  //   WITHDRAWBALANCECONTRACT: 13,
+  //   CUSTOMCONTRACT: 20 }
 
   for (let contract of contractList) {
     let any = contract.getParameter();
@@ -26,7 +45,6 @@ function deserializeTransaction(tx) {
             'protocol.AccountCreateContract'
           );
 
-          console.log('obje', obje);
           throw new Error('');
 
           transactions.push({});
@@ -51,6 +69,36 @@ function deserializeTransaction(tx) {
           let amount = obje.getAmount() / 1000000;
 
           transactions.push({
+            asset: 'TRX',
+            hash,
+            from: ownerHex,
+            to: toHex,
+            amount,
+            timestamp
+          });
+        }
+        break;
+
+      case contractType.TRANSFERASSETCONTRACT:
+        {
+          let obje = any.unpack(
+            TransferAssetContract.deserializeBinary,
+            'protocol.TransferAssetContract'
+          );
+
+          let asset = obje.getAssetName();
+          let assetHex = bytesToString(asset);
+
+          let owner = obje.getOwnerAddress();
+          let ownerHex = getBase58CheckAddress(Array.from(owner));
+
+          let to = obje.getToAddress();
+          let toHex = getBase58CheckAddress(Array.from(to));
+
+          let amount = obje.getAmount() / 1000000;
+
+          transactions.push({
+            asset: assetHex,
             hash,
             from: ownerHex,
             to: toHex,
