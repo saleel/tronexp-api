@@ -52,11 +52,9 @@ function setup(app) {
       const latestBlockNumInDb =
         (latestTransactionInDb && latestTransactionInDb.blockNumber) || 0;
 
-      console.log({ latestBlockNumber, latestBlockNumInDb });
-
       for (
         let i = latestBlockNumInDb;
-        i < Math.min(latestBlockNumber, latestBlockNumInDb + 1000);
+        i < Math.min(latestBlockNumber, latestBlockNumInDb + 5000);
         i += 1
       ) {
         const { trans = [], witnessAddress } = await getDataForBlock(i);
