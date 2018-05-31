@@ -105,13 +105,13 @@ function setup(app) {
       if (latestBlockNumber - latestBlockNumInDb < 100) {
         interval = 10000;
       }
-
-      setTimeout(() => {
-        runTask();
-      }, interval);
     } catch (err) {
       console.warn(err);
     }
+
+    setTimeout(() => {
+      runTask();
+    }, interval);
   }
 
   runTask();
