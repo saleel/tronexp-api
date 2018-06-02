@@ -24,6 +24,11 @@ class WitnessService {
       data
     };
   }
+
+  async get(address) {
+    const witnesses = await this.find({ query: { limi: 1000 } });
+    return witnesses.find(w => w.address === address);
+  }
 }
 
 export default WitnessService;

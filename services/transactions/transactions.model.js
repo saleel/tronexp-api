@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 
 const TransactionSchema = mongoose.Schema({
+  owner: String,
+  type: String,
   asset: String,
   hash: {
     type: String,

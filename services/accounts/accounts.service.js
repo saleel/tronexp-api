@@ -51,6 +51,9 @@ class AccountsService {
 
     const account = formatAccount(accountRes);
 
+    // const accountDb = await Account.findOne({ address: account.address });
+    // account.blocks = accountDb ? accountDb.blocks : [];
+
     if (account.address.length < 30) {
       account.address = address;
     }
@@ -58,19 +61,19 @@ class AccountsService {
     // Add to caching db
     await Account.findOneAndUpdate({ address }, { address }, { upsert: true });
 
-    account.fromTransCount = await Transaction.count({
+    account.fromTransfers = await Transaction.find({
       from: address
     });
 
-    account.toTransCount = await Transaction.count({
+    account.toTransfers = await Transaction.find({
       to: address
     });
 
-    account.transactions = await Transaction.find({
-      $or: [{ to: address }, { from: address }]
-    })
-      .sort({ blockNumber: -1 })
-      .limit(100);
+    // account.transactions = await Transaction.find({
+    //   $or: [{ to: address }, { from: address }]
+    // })
+    //   .sort({ blockNumber: -1 })
+    //   .limit(100);
 
     return account;
   }
