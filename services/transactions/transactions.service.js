@@ -8,16 +8,26 @@ class TransactionService {
   }
 
   async find(params) {
-    let { skip, limit } = params.query;
+    let { skip, limit, contractType = [], address } = params.query;
     limit = parseInt(limit, 10) || 10;
     skip = parseInt(skip, 10) || 0;
+    contractType = Array.isArray(contractType) ? contractType : [contractType];
 
-    const transactions = await Transaction.find()
+    const findParams = {
+      ...contractType.length && { contractType: { $in: contractType } },
+      ...address && { $or: [
+        { 'owner': address },
+        { 'data.from': address },
+        { 'data.to': address }]
+      },
+    }
+
+    const transactions = await Transaction.find(findParams)
       .sort({ blockNumber: -1 })
       .limit(limit)
       .skip(skip);
 
-    const count = await Transaction.count();
+    const count = await Transaction.count(findParams);
 
     return {
       total: count,

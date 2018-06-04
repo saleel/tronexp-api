@@ -1,15 +1,16 @@
-import { deserializeTransaction } from './rpc';
-import Transaction from './services/transactions/transactions.model';
-import Account from './services/accounts/accounts.model';
-import { getBase58CheckAddress } from './rpc/utils/crypto';
+import { deserializeTransaction } from "./rpc";
+import Transaction from "./services/transactions/transactions.model";
+import Account from "./services/accounts/accounts.model";
+import { getBase58CheckAddress } from "./rpc/utils/crypto";
 
+let lastBlockSynced;
 function setup(app) {
   let interval = 1000;
 
-  async function getDataForBlock(num) {
-    const client = app.get('grpcClient');
+  async function getDataForBlock(block) {
+    const client = app.get("grpcClient");
 
-    const blockRes = await client.getBlockByNumber(num);
+    const blockRes = await client.getBlockByNumber(block);
     const blockNumber = blockRes
       .getBlockHeader()
       .getRawData()
@@ -35,59 +36,31 @@ function setup(app) {
         blockNumber
       }));
 
-    return { trans, witnessAddress };
+    return { trans, witnessAddress, block };
   }
 
-  async function runTask() {
-    try {
-      console.log('Starting worker');
-      const client = app.get('grpcClient');
-
-      const lastBlock = await client.getLatestBlock();
-      const latestBlockNumber = lastBlock.toObject().blockHeader.rawData.number;
-
-      const latestTransactionInDb = await Transaction.findOne({}).sort({
-        blockNumber: -1
-      });
-      const latestBlockNumInDb =
-        (latestTransactionInDb && latestTransactionInDb.blockNumber) || 0;
-
-      for (
-        let i = latestBlockNumInDb;
-        i < Math.min(latestBlockNumber, latestBlockNumInDb + 5000);
-        i += 1
-      ) {
-        const { trans = [], witnessAddress } = await getDataForBlock(i);
-        try {
-          await Transaction.insertMany(trans);
-        } catch (e) {
-          for (let t of trans) {
-            await Transaction.findOneAndUpdate({ hash: t.hash }, t, {
-              upsert: true
-            });
-          }
+  async function insertDataToDb({ trans = [], witnessAddress, block }) {
+    if (trans.length) {
+      try {
+        await Transaction.insertMany(trans);
+      } catch (e) {
+        for (let t of trans) {
+          await Transaction.findOneAndUpdate({ hash: t.hash }, t, {
+            upsert: true
+          });
         }
+      }
 
-        if (witnessAddress) {
-          await Account.findOneAndUpdate(
-            { address: witnessAddress },
-            {
-              address: witnessAddress,
-              $addToSet: {
-                blocks: i
-              }
-            },
-            {
-              upsert: true
-            }
-          );
-        }
+      const transfers = trans.filter(
+        t => ["TRANSFERCONTRACT", "TRANSFERASSETCONTRACT"].includes(t.contractType)
+      );
 
+      if (transfers.length) {
         const accounts = []
-          .concat(...trans.map(t => [t.from, t.to]))
-          .map(a => ({
-            address: a
-          }));
+        .concat(...transfers.map(t => [t.data.from, t.data.to]))
+        .map(a => ({
+          address: a
+        }));
 
         try {
           await Account.insertMany(accounts);
@@ -99,17 +72,76 @@ function setup(app) {
           }
         }
       }
+    }
 
-      if (latestBlockNumber - latestBlockNumInDb < 100) {
-        interval = 10000;
+    if (witnessAddress) {
+      await Account.findOneAndUpdate(
+        { address: witnessAddress },
+        {
+          address: witnessAddress,
+          $addToSet: {
+            blocks: block
+          }
+        },
+        {
+          upsert: true
+        }
+      );
+    }
+  }
+
+  async function runTask() {
+    try {
+      console.log("Starting worker");
+      const client = app.get("grpcClient");
+
+      const lastBlock = await client.getLatestBlock();
+      const latestBlockNumber = lastBlock.toObject().blockHeader.rawData.number;
+
+      if (!lastBlockSynced) {
+        const latestTransactionInDb = await Transaction.findOne({}).sort({
+          blockNumber: -1
+        });
+        lastBlockSynced =
+          (latestTransactionInDb && latestTransactionInDb.blockNumber) || 1;
       }
+
+      const asyncLimit = 100;
+      const perLoopLimit = 1000;
+      const blockNums = Array.from(
+        {
+          length: Math.floor(
+            Math.min(latestBlockNumber - lastBlockSynced, perLoopLimit) /
+              asyncLimit
+          )
+        },
+        (v, k) => asyncLimit * k + lastBlockSynced
+      );
+
+      if (blockNums.length > 1) {
+        console.log('Syncing Blocks ', blockNums[0], ' to ', blockNums[blockNums.length -1]);
+        
+        for (let blockNum of blockNums) {
+          const asyncBlockNums = Array.from(
+            { length: asyncLimit },
+            (v, k) => k + blockNum
+          );
+          await Promise.all(
+            asyncBlockNums.map(n => getDataForBlock(n).then(insertDataToDb))
+          );
+        }
+        lastBlockSynced = Math.min(lastBlockSynced + perLoopLimit, latestBlockNumber);
+      } else {
+        console.log('No new blocks. slowing down');
+        interval += 10000;
+      }
+
+      setTimeout(() => {
+        runTask();
+      }, interval);
     } catch (err) {
       console.warn(err);
     }
-
-    setTimeout(() => {
-      runTask();
-    }, interval);
   }
 
   runTask();
